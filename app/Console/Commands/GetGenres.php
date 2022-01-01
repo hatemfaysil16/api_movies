@@ -50,9 +50,9 @@ class GetGenres extends Command
     public function getprivaed()
     {
 
-        $response = Http::get(config('services.tmbd.base_url').'genre/movie/list?api_key='.config('services.tmbd.api_key'));
 
 
+        $response = Http::get(config('services.tmbd.base_url').'genre/movie/list?api_key='.config('services.tmbd.api_key').'&page=1');
 
         foreach($response->json()['genres'] as $gener){
             Genere::create([
@@ -60,18 +60,21 @@ class GetGenres extends Command
                 'name'=>$gener['name'],
             ]);
         }
+
     }
 
     public function getpublic()
     {
 
-        $response = Http::get('https://api.themoviedb.org/3/movie/popular?api_key=9f08afb5ea281633e16b760d2fe238a2&language=en-US&page=1');
+        for($i = 1;$i<=config('services.tmbd.max_pages');$i++)
+        {
+
+        $response = Http::get('https://api.themoviedb.org/3/movie/popular?api_key=9f08afb5ea281633e16b760d2fe238a2&language=en-US&page='.$i);
 
 
 
         foreach($response->json()['results'] as $result){
 
-            // dd($result);
            $Movie = Movie::create([
                 'e_id'=>$result['id'],
                 'original_language'=>$result['original_language'],
@@ -87,19 +90,23 @@ class GetGenres extends Command
             ]);
 
 
+            $this->attachGenres($result,$Movie);
 
-            foreach ($result['genre_ids'] as $generId) {
-
-
-                $generes = Genere::where('e_id',$generId)->first();
-                $Movie->genres()->attach($generId);
-
-
-            }
         }
 
 
     }
+
+        }
+    private function attachGenres($result, Movie $Movie)
+    {
+        foreach ($result['genre_ids'] as $generId)
+        {
+            $generes = Genere::where('e_id',$generId)->first();
+            $Movie->genres()->attach($generId);
+        }
+    }
+
 }
 
 

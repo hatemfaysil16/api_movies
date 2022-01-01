@@ -33,6 +33,7 @@ return [
     'tmbd' => [
         'base_url' => env('TMDB_BASE_URL'),
         'api_key' => env('TMBD_API_KEY'),
+        'max_pages' => env('TMBD_API_PAGE'),
     ],
 
 
