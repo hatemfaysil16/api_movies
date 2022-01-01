@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Actor;
 use App\Models\Genere;
 use App\Models\Movie;
 use Illuminate\Console\Command;
@@ -74,30 +75,51 @@ class GetGenres extends Command
 
 
         foreach($response->json()['results'] as $result){
+            $Movie = Movie::where('e_id',$result['id'])->first();
 
-           $Movie = Movie::create([
-                'e_id'=>$result['id'],
-                'original_language'=>$result['original_language'],
-                'original_title'=>$result['original_title'],
-                'overview'=>$result['overview'],
-                'popularity'=>$result['popularity'],
-                'poster_path'=>$result['poster_path'],
-                'release_date'=>$result['release_date'],
-                'title'=>$result['title'],
-                'video'=>$result['video'],
-                'vote_average'=>$result['vote_average'],
-                'vote_count'=>$result['vote_count'],
-            ]);
+            if(!$Movie) {
+
+                $Movie = Movie::create([
+                    'e_id'=>$result['id'],
+                    'original_language'=>$result['original_language'],
+                    'original_title'=>$result['original_title'],
+                    'overview'=>$result['overview'],
+                    'popularity'=>$result['popularity'],
+                    'poster_path'=>$result['poster_path'],
+                    'release_date'=>$result['release_date'],
+                    'title'=>$result['title'],
+                    'video'=>$result['video'],
+                    'vote_average'=>$result['vote_average'],
+                    'vote_count'=>$result['vote_count'],
+                ]);
+            }else{
+                $Movie->update([
+                    'e_id'=>$result['id'],
+                    'original_language'=>$result['original_language'],
+                    'original_title'=>$result['original_title'],
+                    'overview'=>$result['overview'],
+                    'popularity'=>$result['popularity'],
+                    'poster_path'=>$result['poster_path'],
+                    'release_date'=>$result['release_date'],
+                    'title'=>$result['title'],
+                    'video'=>$result['video'],
+                    'vote_average'=>$result['vote_average'],
+                    'vote_count'=>$result['vote_count'],
+                ]);
+            }
+
 
 
             $this->attachGenres($result,$Movie);
+            $this->attachActors($Movie);
+
 
         }
 
 
     }
 
-        }
+    }
     private function attachGenres($result, Movie $Movie)
     {
         foreach ($result['genre_ids'] as $generId)
@@ -106,6 +128,38 @@ class GetGenres extends Command
             $Movie->genres()->attach($generId);
         }
     }
+
+    private function attachActors(Movie $movie)
+    {
+
+
+
+        $response = Http::get(config('services.tmbd.base_url') . 'movie/' . $movie->e_id . '/credits?api_key=' . config('services.tmbd.api_key'));
+
+
+        foreach ($response->json()['cast'] as $index => $cast) {
+
+            if ($cast['known_for_department'] != 'Acting') continue;
+
+            if ($index == 12) break;
+
+            $actor = Actor::where('e_id', $cast['id'])->first();
+
+            if (!$actor) {
+
+                $actor = Actor::create([
+                    'e_id' => $cast['id'],
+                    'name' => $cast['name'],
+                    'image' => $cast['profile_path'],
+                ]);
+
+            }//end of if
+
+            $movie->actors()->syncWithoutDetaching($actor->id);
+
+        }//end of for each
+
+    }// end of attachActors
 
 }
 
